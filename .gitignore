@@ -1,0 +1,5 @@
+bin/
+.cursor/
+.ncu-tmp/
+__pycache__/
+*.pyc
