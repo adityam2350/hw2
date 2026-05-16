@@ -82,6 +82,14 @@ class RunResult:
     t_flops_measured: float
     bottleneck: str
 
+    roofline_min_dram_bytes: float
+    roofline_compute_time_seconds: float
+    roofline_dram_time_seconds: float
+    roofline_time_seconds: float
+    roofline_tflops: float
+    roofline_AI_dram: float
+    roofline_bottleneck: str
+
     num_spatial_tiles: int
     num_ni_chunks: int
     num_blocks: int
@@ -242,6 +250,13 @@ def _merge_ncu_and_model(
         predicted_tflops=r.predicted_tflops,
         t_flops_measured=t_flops_measured,
         bottleneck=r.bottleneck,
+        roofline_min_dram_bytes=r.roofline_min_dram_bytes,
+        roofline_compute_time_seconds=r.roofline_compute_time_seconds,
+        roofline_dram_time_seconds=r.roofline_dram_time_seconds,
+        roofline_time_seconds=r.roofline_time_seconds,
+        roofline_tflops=r.roofline_tflops,
+        roofline_AI_dram=r.roofline_AI_dram,
+        roofline_bottleneck=r.roofline_bottleneck,
         num_spatial_tiles=r.num_spatial_tiles,
         num_ni_chunks=r.num_ni_chunks,
         num_blocks=r.num_blocks,

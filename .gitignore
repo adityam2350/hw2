@@ -1,4 +1,5 @@
 bin/
+.venv/
 .cursor/
 .ncu-tmp/
 __pycache__/

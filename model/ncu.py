@@ -45,8 +45,14 @@ def run_ncu(binary: Path, cli_args: Sequence[str]) -> Dict[str, float]:
     env = os.environ.copy()
     env["TMPDIR"] = str(NCU_TMP)
     cmd = [
-        "ncu", "--csv",
-        "--metrics", ",".join(NCU_METRICS),
+        "ncu",
+        "--csv",
+        "--launch-skip",
+        "0",
+        "--launch-count",
+        "1",
+        "--metrics",
+        ",".join(NCU_METRICS),
         str(binary),
         *cli_args,
     ]
