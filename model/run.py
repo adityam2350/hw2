@@ -2,8 +2,9 @@
 Single-point harness: profile conv.cu under NCU with tunable Ni/Nn/Ky/Kx
 and tile sizes, run the V1 perf model, emit one CSV row (modeled vs measured).
 
-Spatial output size Ny×Nx is fixed at Conv1 (224×224) from ``--print-defaults``;
-``model/run.py`` does not override it. CHUNK_NI is fixed at 64 from the binary.
+The CLI in ``model/run.py`` uses Ny/Nx from ``--print-defaults``.
+Internal callers can override Ny/Nx through ``measure_and_model``.
+CHUNK_NI is fixed at 64 from the binary.
 
 Adding a column: append a field to ``RunResult``; header and row follow
 ``dataclasses.fields`` order.
@@ -273,14 +274,27 @@ def _merge_ncu_and_model(
 
 
 def measure_and_model(
-    ni: int, nn: int, ky: int, kx: int, tile_x: int, tile_y: int
+    ni: int,
+    nn: int,
+    ky: int,
+    kx: int,
+    tile_x: int,
+    tile_y: int,
+    *,
+    ny_override: int | None = None,
+    nx_override: int | None = None,
 ) -> tuple[RunResult, tuple[str, ...]]:
     """Build the tile binary, profile under NCU, run V1 model, merge into one row."""
     defaults = read_defaults()
+    ny = ny_override if ny_override is not None else defaults["ny"]
+    nx = nx_override if nx_override is not None else defaults["nx"]
+
     binary = build_tile(tile_x, tile_y, defaults["chunk_ni"])
     ncu = run_ncu(
         binary,
         [
+            "--ny", str(ny),
+            "--nx", str(nx),
             "--ni", str(ni),
             "--nn", str(nn),
             "--ky", str(ky),
@@ -290,8 +304,6 @@ def measure_and_model(
         ],
     )
 
-    ny = defaults["ny"]
-    nx = defaults["nx"]
     problem = _build_problem_dict(ny, nx, ni, nn, ky, kx)
     tiling = _build_tiling_dict(tile_x, tile_y, defaults["chunk_ni"], nn)
     r = predict_v1(problem, tiling, hardware_titan_v_v1)

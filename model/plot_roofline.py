@@ -134,7 +134,20 @@ def plot_roofline(
 
     ax.set_xlabel("Arithmetic intensity (FLOP / byte, NCU DRAM R+W)")
     ax.set_ylabel("Performance (TFLOP/s)")
-    ax.set_title("Roofline with measured conv points")
+    ny_vals = sorted({_i(r["ny"]) for r in rows if r.get("ny") not in (None, "")})
+    nx_vals = sorted({_i(r["nx"]) for r in rows if r.get("nx") not in (None, "")})
+    if ny_vals and nx_vals:
+        if len(ny_vals) == 1 and len(nx_vals) == 1:
+            shape_txt = f"Ny={ny_vals[0]}, Nx={nx_vals[0]}"
+        else:
+            shape_txt = (
+                f"Ny∈[{ny_vals[0]}..{ny_vals[-1]}] ({len(ny_vals)}), "
+                f"Nx∈[{nx_vals[0]}..{nx_vals[-1]}] ({len(nx_vals)})"
+            )
+        title = f"Roofline with measured conv points ({shape_txt})"
+    else:
+        title = "Roofline with measured conv points"
+    ax.set_title(title)
     ax.set_xlim(0, ai_max * 1.02)
     perf_for_lim = list(pts_perf)
     if show_model_points and m_perf:

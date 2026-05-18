@@ -1,0 +1,5 @@
+ny,nx,param,elasticity,abs_elasticity
+224,224,peak_fp32_tflops,0.9999999999999972,0.9999999999999972
+224,224,compute_efficiency_base,1.0000000000000016,1.0000000000000016
+224,224,dram_bandwidth_GBps,-0.0,0.0
+224,224,l2_bandwidth_GBps,-0.0,0.0

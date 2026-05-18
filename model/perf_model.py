@@ -232,6 +232,12 @@ def predict_v1(
 
     sm_utilization = min(1.0, num_blocks / num_sms) if num_sms > 0 else 1.0
     parallelism_penalty = 1.0 / sm_utilization if sm_utilization > 0 else math.inf
+    
+    # # based on measurements from varying block count and underutilizing SMs
+    if num_blocks > 0:
+        scale = -1 / 3 * math.log2(float(num_blocks)) + 4.2
+        scale = max(1.0, scale)  # avoid reducing penalty at large block counts
+        effective_parallelism_penalty = parallelism_penalty * scale
 
     total_flops = float(Ny * Nx * Nn * Ky * Kx * Ni * 2)
     roofline_min_dram_bytes = _roofline_min_dram_bytes(Ny, Nx, Ky, Kx, Ni, Nn)
@@ -388,18 +394,18 @@ def predict_v1(
         if math.isclose(t, bottleneck_time_seconds, rel_tol=0.0, abs_tol=1e-30)
     )
 
-    # Penalty for square ≥10×10 only; damp at large Ni (measured drag fades vs 8×8).
-    if is_square_large_tile:
-        tile_excess = max(0.0, tile_area - tile_area_ref)
-        ni_damp = (
-            (sq_pen_ni_ref / float(max(min(Ni, Nn), 1))) ** sq_pen_ni_exp
-        )
-        ni_damp = min(1.0, max(0.4, ni_damp))
-        tiling_slowdown = 1.0 + tile_penalty_lam * tile_excess * ni_damp
-    else:
-        tiling_slowdown = 1.0
+    # # Penalty for square ≥10×10 only; damp at large Ni (measured drag fades vs 8×8).
+    # if is_square_large_tile:
+    #     tile_excess = max(0.0, tile_area - tile_area_ref)
+    #     ni_damp = (
+    #         (sq_pen_ni_ref / float(max(min(Ni, Nn), 1))) ** sq_pen_ni_exp
+    #     )
+    #     ni_damp = min(1.0, max(0.4, ni_damp))
+    #     tiling_slowdown = 1.0 + tile_penalty_lam * tile_excess * ni_damp
+    # else:
+    tiling_slowdown = 1.0
     predicted_time_seconds = (
-        bottleneck_time_seconds * parallelism_penalty * tiling_slowdown
+        bottleneck_time_seconds * effective_parallelism_penalty * tiling_slowdown
     )
 
     AI_dram = total_flops / dram_bytes if dram_bytes > 0 else math.inf

@@ -28,7 +28,7 @@ extern "C" void conv_launch(const float* d_weight, const float* d_input,
 
 /* ------------------------------------------------------------------ */
 /*  Single source of truth for defaults (Conv1: 224^2, 3x3, 64/64).   */
-/*  ny/nx: fixed problem shape (not CLI). ni/nn/ky/kx: CLI defaults.    */
+/*  ny/nx/ni/nn/ky/kx are CLI-overridable defaults.                      */
 /*  To add a new default: append a field + one line in print_defaults.   */
 /* ------------------------------------------------------------------ */
 
@@ -48,6 +48,8 @@ static constexpr Defaults kDefaults = {};
 static constexpr int kChunkNi = 64;
 
 struct RunConfig {
+    int ny;
+    int nx;
     int ni;
     int nn;
     int ky;
@@ -190,34 +192,37 @@ cleanup:
 static void print_help(FILE* out, const char* prog) {
     fprintf(out,
             "Usage:\n"
-            "  %s [--ni NI] [--nn NN] [--ky K] [--kx K]\n"
+            "  %s [--ny NY] [--nx NX] [--ni NI] [--nn NN] [--ky K] [--kx K]\n"
             "  %*s [--tile-x TX] [--tile-y TY]\n"
             "  %*s [--print-defaults] [--help]\n"
             "\n"
-            "Runs one Conv1-shaped convolution (Ny=Nx=224 fixed in this harness)\n"
-            "and verifies against a CPU reference. Kernel time is measured\n"
+            "Runs one convolution and verifies against a CPU reference.\n"
+            "Kernel time is measured\n"
             "externally by Nsight Compute.\n"
             "\n"
             "Tunable knobs (see --print-defaults for defaults):\n"
+            "  --ny NY          output height   (default %d)\n"
+            "  --nx NX          output width    (default %d)\n"
             "  --ni NI          input channels  (default %d)\n"
             "  --nn NN          output channels (default %d)\n"
             "  --ky K           filter height    (default %d)\n"
             "  --kx K           filter width     (default %d)\n"
             "  --tile-x TX      must equal compile-time TILE_X (%d). Default %d\n"
             "  --tile-y TY      must equal compile-time TILE_Y (%d). Default %d\n"
-            "  --print-defaults print defaults JSON (ny/nx are fixed Conv1 shape)\n"
+            "  --print-defaults print defaults JSON\n"
             "  --help, -h       show this message\n"
             "\n"
-            "Fixed: Ny=%d Nx=%d (not CLI), CHUNK_NI=%d (Makefile / conv.cu).\n"
+            "Fixed: CHUNK_NI=%d (Makefile / conv.cu).\n"
             "GPU kernel assumes Ni and per-chunk sizes are multiples of 4\n"
             "(float4 loads).\n",
             prog, (int)strlen(prog), "",
             (int)strlen(prog), "",
+            kDefaults.ny, kDefaults.nx,
             kDefaults.ni, kDefaults.nn,
             kDefaults.ky, kDefaults.kx,
             TILE_X, kDefaults.tile_x,
             TILE_Y, kDefaults.tile_y,
-            kDefaults.ny, kDefaults.nx, kChunkNi);
+            kChunkNi);
 }
 
 /* Emit defaults as a tiny JSON object. Single source of truth for       */
@@ -252,6 +257,8 @@ static int parse_int_arg(const char* flag, const char* value, int* out) {
 /* Returns 0 on success, 1 if a "stop after parsing" flag was handled    */
 /* (--help, --print-defaults), -1 on parse error.                        */
 static int parse_args(int argc, char** argv, RunConfig* cfg) {
+    cfg->ny     = kDefaults.ny;
+    cfg->nx     = kDefaults.nx;
     cfg->ni     = kDefaults.ni;
     cfg->nn     = kDefaults.nn;
     cfg->ky     = kDefaults.ky;
@@ -269,6 +276,16 @@ static int parse_args(int argc, char** argv, RunConfig* cfg) {
         if (strcmp(a, "--print-defaults") == 0) {
             print_defaults_json(stdout);
             return 1;
+        }
+        if (strcmp(a, "--ny") == 0) {
+            const char* v = (i + 1 < argc) ? argv[++i] : nullptr;
+            if (parse_int_arg("--ny", v, &cfg->ny) != 0) return -1;
+            continue;
+        }
+        if (strcmp(a, "--nx") == 0) {
+            const char* v = (i + 1 < argc) ? argv[++i] : nullptr;
+            if (parse_int_arg("--nx", v, &cfg->nx) != 0) return -1;
+            continue;
         }
         if (strcmp(a, "--ni") == 0) {
             const char* v = (i + 1 < argc) ? argv[++i] : nullptr;
@@ -327,7 +344,7 @@ int main(int argc, char** argv) {
 
     if (validate_tile_matches_compile(cfg.tile_x, cfg.tile_y) != 0) return 1;
 
-    run_conv(kDefaults.ny, kDefaults.nx,
+    run_conv(cfg.ny, cfg.nx,
              cfg.ky, cfg.kx, cfg.ni, cfg.nn);
     return 0;
 }

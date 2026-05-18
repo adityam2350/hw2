@@ -9,7 +9,8 @@ Typical usage (from repo root, GPU + ncu on PATH, ``make`` done):
     --tile-xs 8 16 --tile-ys 8 16
 
 Channels default to a single (ni, nn) from ``bin/conv --print-defaults`` if
-omitted; tiles default similarly if omitted.
+omitted; tiles default similarly if omitted. Ny/Nx default from
+``bin/conv --print-defaults`` and can be overridden via ``--ny`` / ``--nx``.
 
 Extra columns vs ``run.py`` single row:
   mape_time_v1_pct, mape_time_roofline_pct, rel_err_time_v1, rel_err_time_roofline
@@ -133,6 +134,18 @@ def main() -> None:
     )
     parser.add_argument("--ky", type=int, default=None)
     parser.add_argument("--kx", type=int, default=None)
+    parser.add_argument(
+        "--ny",
+        type=int,
+        default=None,
+        help="output height (default: from --print-defaults)",
+    )
+    parser.add_argument(
+        "--nx",
+        type=int,
+        default=None,
+        help="output width (default: from --print-defaults)",
+    )
     args = parser.parse_args()
 
     if not conv_run.default_binary().exists():
@@ -141,6 +154,8 @@ def main() -> None:
         )
 
     defaults = conv_run.read_defaults()
+    ny = args.ny if args.ny is not None else defaults["ny"]
+    nx = args.nx if args.nx is not None else defaults["nx"]
     ky = args.ky if args.ky is not None else defaults["ky"]
     kx = args.kx if args.kx is not None else defaults["kx"]
 
@@ -157,12 +172,20 @@ def main() -> None:
         for (ni, nn), (tile_x, tile_y) in itertools.product(ch_cfgs, til_cfgs):
             n_run += 1
             print(
-                f"[sweep] run {n_run}: ni={ni} nn={nn} tile={tile_x}x{tile_y}",
+                f"[sweep] run {n_run}: ny={ny} nx={nx} ni={ni} nn={nn} "
+                f"tile={tile_x}x{tile_y}",
                 file=sys.stderr,
                 flush=True,
             )
             result, flags = conv_run.measure_and_model(
-                ni, nn, ky, kx, tile_x, tile_y
+                ni,
+                nn,
+                ky,
+                kx,
+                tile_x,
+                tile_y,
+                ny_override=ny,
+                nx_override=nx,
             )
             if flags:
                 any_fallback = True

@@ -2,8 +2,8 @@
 Read the C++ harness's defaults via ``./bin/conv --print-defaults``.
 
 ``main.cpp`` is the single source of truth
-for default ``ny``, ``nx`` (fixed Conv1 spatial shape, not overridable on the
-CLI), ``ky``, ``kx``, ``ni``, ``nn``, ``chunk_ni`` (fixed at 64), and default
+for default ``ny``, ``nx``, ``ky``, ``kx``, ``ni``, ``nn``,
+``chunk_ni`` (fixed at 64), and default
 tile sizes. Python consumers invoke the binary rather than redeclaring these
 so the two sides cannot drift.
 """
@@ -30,9 +30,8 @@ REQUIRED_KEYS = (
 def read_defaults(binary: Path | None = None) -> Dict[str, int]:
     """Invoke ``binary --print-defaults`` and return the parsed JSON.
 
-    ``ny`` / ``nx`` are the fixed Conv1 output size (224). They are not CLI
-    knobs on ``./bin/conv``; use them as the spatial dimensions for the perf
-    model unless you change ``kDefaults`` and rebuild.
+    ``ny`` / ``nx`` defaults come from ``./bin/conv --print-defaults`` and can
+    be overridden at runtime via the binary CLI.
 
     Falls back to ``bin/conv`` if no binary is given. Building that binary
     is the caller's responsibility (Makefile's default target).
